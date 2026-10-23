@@ -69,3 +69,6 @@
 | 03-ssh-hardened | Харденинг SSH | порт 2222, UFW активен |
 | 04-nginx-https | Настройка Nginx | Nginx, HTTPS, TLS-сертификат, деплой rsync |
 | 05-docker-compose | Контейнеризация | Docker Compose (Flask + PostgreSQL), Reverse Proxy /app/ |
+
+| 05-docker-compose | Контейнеризация | Docker Compose (Flask + PostgreSQL), Reverse Proxy /app/ |
+| 04-nginx-https | Настройка Nginx | Nginx, HTTPS, TLS-сертификат, деплой rsync |
