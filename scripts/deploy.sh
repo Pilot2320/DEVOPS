@@ -54,3 +54,5 @@ fi
 COMMIT_HASH="$(git rev-parse --short HEAD)"
 echo "Деплой успешно выполнен. Хеш коммита: ${COMMIT_HASH}"
 exit 0
+
+exit 0
