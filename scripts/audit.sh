@@ -28,12 +28,17 @@ echo "[3] Учётные записи"
 awk -F: '$3>=1000 && $3<65534 {printf "  %s (uid=%s)\n",$1,$3}' /etc/passwd
 
 echo "[4] Веб-сервер"
-check "Служба nginx активна" "active" "$(systemctl is-active nginx 2>/dev/null)"
-check "Синтаксис конфигурации Nginx корректен" "0" "$([[ $(sudo nginx -t 2>&1 >/dev/null; echo $?) -eq 0 ]] && echo 0 || echo 1)"
-check "Сертификат действует ещё минимум 30 дней" "0" "$([[ $(openssl x509 -checkend 2592000 -noout -in /etc/ssl/certs/devops.crt 2>/dev/null; echo $?) -eq 0 ]] && echo 0 || echo 1)"
+check "Служба nginx активна" "active" "$(systemctl is-active nginx 2>/dev/null || echo inactive)"
+check "Синтаксис конфигурации Nginx корректен" "0" "$(if sudo nginx -t >/dev/null 2>&1; then echo 0; else echo 1; fi)"
+check "Сертификат действует ещё минимум 30 дней" "0" "$(if openssl x509 -checkend 2592000 -noout -in /etc/ssl/certs/devops.crt >/dev/null 2>&1; then echo 0; else echo 1; fi)"
 check "В каталоге ресурса нет файлов с правами записи для всех" "0" "$(find /var/www/devops-site -perm -o+w 2>/dev/null | wc -l)"
-check "Права закрытого ключа TLS равны 600" "600" "$(sudo stat -c '%a' /etc/ssl/private/devops.key 2>/dev/null)"
+check "Права закрытого ключа TLS равны 600" "600" "$(sudo stat -c '%a' /etc/ssl/private/devops.key 2>/dev/null || echo '')"
+
+echo "[5] Контейнеризация"
+check "Служба docker активна" "active" "$(systemctl is-active docker 2>/dev/null || echo inactive)"
+check "Контейнер СУБД в состоянии healthy" "healthy" "$(docker inspect -f '{{.State.Health.Status}}' app-db-1 2>/dev/null || echo '')"
+check "Порты 5000 и 5432 не открыты наружу" "0" "$(sudo ss -tln 2>/dev/null | grep -E ':(5000|5432)\b' | grep -v '127\.0\.0\.1' | wc -l)"
+check "Файл .env имеет права 600" "600" "$(stat -c '%a' "$HOME/app/.env" 2>/dev/null || echo '')"
 
 echo "Пройдено: $PASS, не пройдено: $FAIL"
-[[ $FAIL -eq 0 ]] && exit 0 || exit 1
 [[ $FAIL -eq 0 ]] && exit 0 || exit 1

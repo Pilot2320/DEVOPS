@@ -20,7 +20,7 @@
 | Имя | Группы | Аутентификация |
 |---|---|---|
 | student | student, sudo | пароль (только консоль ВМ) |
-| devops | devops, sudo | SSH только по ключу ed25519 (`devops_vm.pub`) |
+| devops | devops, sudo, docker | SSH только по ключу ed25519 (`devops_vm.pub`) |
 
 ## 5. Служба SSH
 - Порт: 2222
@@ -47,10 +47,28 @@
 - Срок действия: 365 дней (1 год).
 - Настройки: редирект HTTP (порт 80) -> HTTPS (порт 443, код 301).
 
-## 8. Снимки состояния
+## 8. Обратный прокси-сервер (Reverse Proxy)
+- Маршрутизация: секция `location /app/` в блоке HTTPS конфигурации `/etc/nginx/sites-available/devops-site`.
+- Проксирует запросы на `http://127.0.0.1:5000/`.
+- Заголовки проксирования: `Host $host`, `X-Real-IP $remote_addr`, `X-Forwarded-For $proxy_add_x_forwarded_for`, `X-Forwarded-Proto $scheme`.
+
+## 9. Контейнеризация (Docker & Docker Compose)
+- Способ установки Docker Engine: официальный репозиторий Docker (`docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-buildx-plugin`, `docker-compose-plugin`). Пакет `docker.io` исключён.
+- Участники группы docker: `devops` (запуск контейнеров без `sudo`).
+- Расположение проекта: `/home/devops/app/`.
+- Переменные окружения: файл `/home/devops/app/.env` (права `600`, исключён из Git через `.gitignore` и из контекста сборки через `.dockerignore`). Содержит случайный пароль базы данных `POSTGRES_PASSWORD`.
+- Публикуемые порты: сервис `app` прослушивает строго локальный сокет `127.0.0.1:5000:5000` для изоляции от внешней сети. Порт PostgreSQL `5432` во внешнюю сеть не публикуется.
+- Именованные тома: `app_db_data` (сохраняет базу PostgreSQL в `/var/lib/postgresql/data` при перезапуске `docker compose down`).
+- Запуск контейнера: процесс `app` работает от непривилегированного пользователя `app` (UID=1001, non-root).
+
+## 10. Снимки состояния
 | Наименование | Момент создания | Состояние |
 |---|---|---|
 | 01-clean-install | Чистая установка | student, SSH на 22 |
 | 02-keys-configured | Настройка ключей | пользователь devops, вход по SSH-ключу |
 | 03-ssh-hardened | Харденинг SSH | порт 2222, UFW активен |
+| 04-nginx-https | Настройка Nginx | Nginx, HTTPS, TLS-сертификат, деплой rsync |
+| 05-docker-compose | Контейнеризация | Docker Compose (Flask + PostgreSQL), Reverse Proxy /app/ |
+
+| 05-docker-compose | Контейнеризация | Docker Compose (Flask + PostgreSQL), Reverse Proxy /app/ |
 | 04-nginx-https | Настройка Nginx | Nginx, HTTPS, TLS-сертификат, деплой rsync |

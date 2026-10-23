@@ -129,3 +129,4 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+.env
