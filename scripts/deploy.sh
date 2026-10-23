@@ -8,6 +8,9 @@ REMOTE_DIR="/var/www/devops-site"
 SITE_URL="https://devops.local"
 CA_CERT="${HOME}/devops.crt"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+if command -v cygpath >/dev/null 2>&1; then
+    REPO_ROOT="$(cygpath -u "${REPO_ROOT}")"
+fi
 LOCAL_DIR="${REPO_ROOT}/site/"
 
 # 1. Проверка аргументов
