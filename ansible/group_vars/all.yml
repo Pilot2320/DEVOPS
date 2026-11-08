@@ -1,0 +1,6 @@
+---
+app_image: "ghcr.io/pilot2320/devops-ci-app"
+app_tag: "2f8902cb767b01a454d0bdd4a00b5169857e3dea"
+app_container_name: "devops-ci-app"
+app_host_port: 5000
+app_internal_port: 5000

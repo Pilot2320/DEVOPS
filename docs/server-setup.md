@@ -72,3 +72,29 @@
 
 | 05-docker-compose | Контейнеризация | Docker Compose (Flask + PostgreSQL), Reverse Proxy /app/ |
 | 04-nginx-https | Настройка Nginx | Nginx, HTTPS, TLS-сертификат, деплой rsync |
+
+
+## 11. Управление конфигурациями (Ansible)
+- **Расположение проекта:** каталог `ansible/` в корне репозитория.
+- **Управляющий узел (Control Node):** рабочая станция с ОС Linux / WSL (Ubuntu 24.04), установлены `ansible-core 2.16+` и утилита `sshpass`.
+- **Управляемый узел (Managed Node):** виртуальная машина `devops-vm` (IP: `192.168.56.101`, порт `22`, адаптер Host-only).
+- **Файлы инвентаря (Inventory):**
+  - `inventory/bootstrap.ini`: первичное подключение под учетной записью `student` с интерактивным вводом паролей (`--ask-pass`, `--ask-become-pass`);
+  - `inventory/prod.ini`: постоянная эксплуатация под учетной записью `devops` по SSH-ключу (`~/.ssh/devops_vm`) без интерактивного ввода.
+- **Учетные записи:**
+  - `student`: начальный вход для создания сервисной учетной записи;
+  - `devops`: автоматизированный запуск, входит в группы `sudo` (с правилом `NOPASSWD:ALL` в `/etc/sudoers.d/devops`) и `docker`.
+- **Структура и зоны ответственности ролей:**
+  - `base`: проверка дистрибутива (Ubuntu 24.04 amd64), установка системных утилит и зависимостей модулей (`python3-requests`, `python3-debian`), подключение официального Docker-репозитория (`deb822_repository`) и запуск Docker Engine;
+  - `ssh`: создание пользователя `devops`, размещение открытого ключа `devops_vm.pub`, настройка NOPASSWD в `sudoers`, жесткий харденинг в `/etc/ssh/sshd_config.d/00-ansible-hardening.conf` (запрет входа по паролям и под root), правила межсетевого экрана UFW (разрешены порты 22 и 80, incoming deny);
+  - `nginx`: установка Nginx, настройка reverse proxy через Jinja2-шаблон `devops-ci-app.conf.j2` на локальный сокет `127.0.0.1:5000`, отключение сайта по умолчанию, двухэтапный handler (проверка `nginx -t` перед `systemctl reload nginx`);
+  - `app`: включение `devops` в группу `docker`, безопасное скачивание проверенного образа из GHCR по полному неизменяемому SHA, запуск контейнера `devops-ci-app` с привязкой порта строго к `127.0.0.1:5000:5000`, опрос эндпоинта жизнеспособности через модуль `uri` (ожидание HTTP 200 и `status: ok`).
+- **Параметры приложения и реестра контейнеров:**
+  - Образ: `ghcr.io/pilot2320/devops-ci-app`;
+  - Неизменяемый тег: полный 40-значный SHA коммита из ПР № 10 (`4098ee88f0bcdc3e3349f3ac9dcb623daad57d14`);
+  - Локальный сокет контейнера: `127.0.0.1:5000:5000` (защита от прямого обхода Nginx через iptables Docker);
+  - Эндпоинт проверки здоровья: `http://127.0.0.1:5000/health`.
+- **Команды управления и проверки:**
+  - Первичный запуск (bootstrap): `ansible-playbook -i inventory/bootstrap.ini site.yml --ask-pass --ask-become-pass`
+  - Повторный запуск (prod): `ansible-playbook site.yml` (обеспечивает идемпотентность, результат `changed=0, failed=0`)
+  - Автоматизированный read-only аудит: `ansible-playbook verify.yml` (проверка `sshd -T`, фактов контейнера и HTTP 200 без изменения системы).
